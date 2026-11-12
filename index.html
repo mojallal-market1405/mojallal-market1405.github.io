@@ -741,18 +741,24 @@ return list.length?[...new Set(list)]:[FALLBACK];
 function getColors(p){
 let list=p.colors||[];
 if(typeof list==="string"){
-try{list=JSON.parse(list)}catch{list=list.split(/[,،\n]/)}
+try{list=JSON.parse(list)}catch{
+// جداکننده رنگ‌ها: کاما/ویرگول/خط جدید؛ ولی کامای هزارگان داخل قیمت (92,000,000) جدا نمی‌شود
+list=list.split(/[;\n]+|[,،](?![0-9۰-۹٠-٩]{3}(?![0-9۰-۹٠-٩]))/)
+}
 }
 if(!Array.isArray(list))return [];
-const colorMap={"مشکی":"#111","سفید":"#fff","نقره‌ای":"#c0c0c8","خاکستری":"#888","طوسی":"#888","طلایی":"#d4af37","قرمز":"#e53935","آبی":"#1e66d0","سبز":"#2e9e5b","قهوه‌ای":"#6d4c41","کرم":"#f1e4c8"};
+const colorMap={"مشکی":"#111","سفید":"#fff","نقرهای":"#c0c0c8","خاکستری":"#888","طوسی":"#888","طلایی":"#d4af37","گلد":"#d4af37","رزگلد":"#b76e79","قرمز":"#e53935","آبی":"#1e66d0","ابی":"#1e66d0","سبز":"#2e9e5b","قهوهای":"#6d4c41","کرم":"#f1e4c8","بژ":"#d9c3a0","صورتی":"#f06292","بنفش":"#8e44ad","نارنجی":"#fb8c00","زرد":"#fdd835","سرمهای":"#1a237e","زرشکی":"#8e1b3a"};
+// برای تطبیق نام رنگ: حروف عربی/فاصله/نیم‌فاصله نادیده گرفته می‌شوند
+const colorKey=s=>String(s||"").replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/[\u200c\s]/g,"");
+const lookup=n=>colorMap[colorKey(n)];
 return list.filter(Boolean).map(x=>{
 if(typeof x==="object"){
 const name=String(x.name||"");
-return{name,hex:/^#/.test(x.hex||"")?x.hex:(colorMap[name]||"#ccc"),price:number(x.price)}
+return{name,hex:/^#/.test(x.hex||"")?x.hex:(lookup(name)||"#ccc"),price:number(x.price)}
 }
 const parts=String(x).split(/[|:=]/).map(v=>v.trim());
 const name=parts.shift();
-const hex=parts.find(v=>/^#/.test(v))||colorMap[name]||"#ccc";
+const hex=parts.find(v=>/^#/.test(v))||lookup(name)||"#ccc";
 const price=number(parts.find(v=>number(v)));
 return{name,hex,price};
 }).filter(x=>x.name);
@@ -863,7 +869,7 @@ async function loadProducts(){
 try{
 if(!window.supabase?.createClient)throw new Error("Supabase library unavailable");
 db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-const result=await db.from("products") .select("id,title,category,price,image_url,stock_status") .order("id",{ascending:false}) .limit(40);
+const result=await db.from("products") .select("id,title,category,price,image_url,stock_status,colors,specs,description") .order("id",{ascending:false}) .limit(40);
 if(result.error)throw result.error;
 products=Array.isArray(result.data)?result.data.filter(p=>p&&p.id!==undefined):[];
 renderProducts();
